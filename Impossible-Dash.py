@@ -13,7 +13,6 @@ third step is to add the scoring system and the death counter,'''
 
 
 
-
 import pygame 
 import random
 import sys
@@ -39,6 +38,10 @@ GRAVITY = 0.6
 
 # =====================
 # Player Class
+
+
+''' This definds the player object which creates an object that the player can control, if the user presses the space bar,
+the object will jump, if the user makes the object tuch another object the user will die.'''
 # =====================
 class Player:
     def __init__(self):
@@ -46,6 +49,7 @@ class Player:
         self.y = HEIGHT - 60
         self.width = 40
         self.height = 40
+        self.image = pygame.transform.scale(pygame.image.load("assets/Character.png"), (self.width, self.height))
         self.vel_y = 0
         self.on_ground = True
 
@@ -65,7 +69,36 @@ class Player:
             self.on_ground = True
 
     def draw(self, screen):
-        pygame.draw.rect(screen, BLACK, (self.x, self.y, self.width, self.height))
+        screen.blit(self.image, (self.x, self.y))
+
+    def get_rect(self):
+        return pygame.Rect(self.x, self.y, self.width, self.height)
+    
+    # =====================
+# Obstacle Class
+
+''' This this definds an object which the player can jump on or over, 
+however I have not finished coding so if the user tuches the
+object, the user will die. '''
+
+# =====================
+class Obstacle:
+    def __init__(self):
+        self.width = 30
+        self.height = random.randint(30, 60)
+        self.x = WIDTH
+        self.y = HEIGHT - self.height - 20
+        self.image = pygame.transform.scale(pygame.image.load("assets/Object.png"), (self.width, self.height))
+        self.speed = 5
+
+    def update(self):
+        self.x -= self.speed
+
+    def draw(self, screen):
+        screen.blit(self.image, (self.x, self.y))
+
+    def off_screen(self):
+        return self.x < -self.width
 
     def get_rect(self):
         return pygame.Rect(self.x, self.y, self.width, self.height)
@@ -100,19 +133,37 @@ def main():
         # Spawn obstacles
         spawn_timer += 1
         if spawn_timer > 90:
+            obstacles.append(Obstacle())
             spawn_timer = 0
 
         # Update player
         player.update()
 
+        # Update obstacles
+        for obstacle in obstacles:
+            obstacle.update()
+
+        # Remove off-screen obstacles
+        obstacles = [o for o in obstacles if not o.off_screen()]
+
         # Collision detection
         player_rect = player.get_rect()
+        for obstacle in obstacles:
+            if player_rect.colliderect(obstacle.get_rect()):
+                deaths += 1
+                player = Player()
+                obstacles.clear()
+                score = 0
+                break
 
         # Update score
         score += 1
 
         # Draw everything
         player.draw(screen)
+        for obstacle in obstacles:
+            obstacle.draw(screen)
+
 
 
         # UI text
