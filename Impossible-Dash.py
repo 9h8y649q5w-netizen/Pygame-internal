@@ -77,15 +77,14 @@ class Player:
     # =====================
 # Obstacle Class
 
-''' This this definds an object which the player can jump on or over, 
-however I have not finished coding so if the user tuches the
-object, the user will die. '''
+''' This this definds an object which the player can jump on or over. '''
 
 # =====================
 class Obstacle:
     def __init__(self):
-        self.width = 30
-        self.height = random.randint(30, 60)
+        self.type = "Platform"
+        self.width = 40
+        self.height = 40
         self.x = WIDTH
         self.y = HEIGHT - self.height - 20
         self.image = pygame.transform.scale(pygame.image.load("assets/Object.png"), (self.width, self.height))
@@ -103,6 +102,32 @@ class Obstacle:
     def get_rect(self):
         return pygame.Rect(self.x, self.y, self.width, self.height)
 
+"""this definds an kill object which if the player tuches it the user will die."""
+
+class KillObject(Obstacle):
+     def __init__(self):
+        super().__init__()  # get everything from Obstacle
+        self.type = "KillObject"
+        self.image = pygame.transform.scale(pygame.image.load("assets/KillObject.png"), (self.width, self.height))
+
+
+"""this definds a function to cheek if the player is on top of the object and if it isn't it will kill the user. """
+
+def is_landing_on_top(player, obstacle):
+    player_rect = player.get_rect()
+    obstacle_rect = obstacle.get_rect()
+
+    # Check horizontal overlap
+    horizontal = player_rect.right > obstacle_rect.left and player_rect.left < obstacle_rect.right
+
+    # Check if player is falling and touching top
+    landing = (
+        player.vel_y > 0 and  # falling
+        player_rect.bottom <= obstacle_rect.top + 10 and
+        player_rect.bottom >= obstacle_rect.top - 10
+    )
+
+    return horizontal and landing
 
 # =====================
 # Game Loop
@@ -133,8 +158,12 @@ def main():
         # Spawn obstacles
         spawn_timer += 1
         if spawn_timer > 90:
-            obstacles.append(Obstacle())
+            if random.randint(1, 3) == 1:  # 1 in 3 chance to spawn a kill object
+                obstacles.append(KillObject())
+            else:
+                obstacles.append(Obstacle())
             spawn_timer = 0
+
 
         # Update player
         player.update()
@@ -149,15 +178,23 @@ def main():
         # Collision detection
         player_rect = player.get_rect()
         for obstacle in obstacles:
-            if player_rect.colliderect(obstacle.get_rect()):
-                deaths += 1
-                player = Player()
-                obstacles.clear()
-                score = 0
-                break
 
-        # Update score
-        score += 1
+            if is_landing_on_top(player, obstacle) and obstacle.type == "Platform":
+                # Snap player to top of obstacle
+                player.y = obstacle.y - player.height
+                player.vel_y = 0
+                player.on_ground = True
+                break
+            else: 
+                if  (obstacle.type == "KillObject" or obstacle.type == "Platform") and player_rect.colliderect(obstacle.get_rect()):
+                    deaths += 1
+                    player = Player()
+                    obstacles.clear()
+                    score = 0
+                    break
+
+            # Update score
+            score += 1
 
         # Draw everything
         player.draw(screen)
