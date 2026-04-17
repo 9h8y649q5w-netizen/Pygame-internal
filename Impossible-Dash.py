@@ -74,11 +74,12 @@ GRAVITY = 0.6
 
 """this difinds a class that will help us create levels."""
 class LevelItem:
-    def __init__(self, length = 1, speed = 1, obstacle = None, height = 1):
+    def __init__(self, length = 1, speed = 1, obstacle = None, height_scale = 1):
         self.length = length
         self.speed = speed
         self.obstacle = obstacle
-        self.height = height
+        self.height_scale = height_scale
+
 
 # =====================
 # Player Class
@@ -125,24 +126,26 @@ class Player:
 
 # =====================
 class Obstacle:
-    def __init__(self):
+    def __init__(self, height_scale = 1):
         self.type = "Platform"
         self.width = 40
         self.height = 40
-        self.x = WIDTH
-        self.y = GROUND_Y - self.height
+        self.height_scale = height_scale
         self.image = pygame.transform.scale(pygame.image.load("assets/Object.png"), (self.width, self.height))
+
+        self.x = WIDTH
+        self.y = GROUND_Y - (self.height * self.height_scale)
+
         self.speed = 5
 
     def reset(self):
         self.x = WIDTH
-       # self.y = GROUND_Y - self.height
 
     def update(self):
         self.x -= self.speed
 
     def draw(self, screen):
-        screen.blit(self.image, (self.x, self.y))
+        screen.blit(self.image, (self.x, self.y))  
 
     def off_screen(self):
         return self.x < -self.width
@@ -153,7 +156,7 @@ class Obstacle:
 """this definds an kill object which if the player tuches it the user will die."""
 
 class KillObject(Obstacle):
-    def __init__(self):
+    def __init__(self, height_scale = 1):
         super().__init__()
 
         self.type = "KillObject"
@@ -169,7 +172,7 @@ class KillObject(Obstacle):
         self.height = 30
 
         # FORCE correct ground alignment
-        self.y = GROUND_Y - self.height - 10
+        self.y = GROUND_Y - (self.height * self.height_scale) - 10
 
 
 
@@ -205,15 +208,15 @@ def main():
     obstacles = []
 
     level = []
-    level.append(LevelItem(1, 1,Obstacle, 1))
-    level.append(LevelItem(1, 1,Obstacle, 1))
-    level.append(LevelItem(1, 1,Obstacle, 1))
-    level.append(LevelItem(1, 1,KillObject, 1))
-    level.append(LevelItem(1, 1,Obstacle, 1))
-    level.append(LevelItem(1, 1,Obstacle, 1))
-    level.append(LevelItem(1, 1,Obstacle, 1))
-    level.append(LevelItem(1, 1,KillObject, 1))
-    level.append(LevelItem(1, 1,KillObject, 1))
+    level.append(LevelItem(1, 1, Obstacle, 1))
+    level.append(LevelItem(1, 1, Obstacle, 2))
+    level.append(LevelItem(1, 1, Obstacle, 1))
+    level.append(LevelItem(1, 1, KillObject, 1))
+    level.append(LevelItem(1, 1, Obstacle, 1))
+    level.append(LevelItem(1, 1, Obstacle, 1))
+    level.append(LevelItem(1, 1, Obstacle, 1))
+    level.append(LevelItem(1, 1, KillObject, 1))
+    level.append(LevelItem(1, 1, KillObject, 1))
 
     high_scores = load_high_scores()
 
@@ -255,7 +258,7 @@ def main():
                 if current_timer < 10:  # Prevent timer from going too low
                     current_timer = 10
 
-            obstacle = level[level_index].obstacle()  # Create obstacle based on current level item
+            obstacle = level[level_index].obstacle(level[level_index].height_scale)  # Create obstacle based on current level item
             obstacle.reset()  # Reset obstacle position
             obstacles.append(obstacle)  # Spawn obstacle from lev
 
