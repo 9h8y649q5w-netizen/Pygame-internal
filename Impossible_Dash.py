@@ -13,15 +13,85 @@ third step is to add the scoring system and the death counter,'''
 
 
 
+from turtle import speed
+
 import pygame 
 import random
 import sys
 import json
 import os 
+from pygame.locals import *
 
 # Initialize Pygame
 pygame.init()
- 
+pygame.mixer.init()
+
+# Screen
+WIDTH, HEIGHT = 1280, 720
+screen = pygame.display.set_mode((WIDTH, HEIGHT), FULLSCREEN)
+#pygame.display.set_caption("Impossible Dash")
+
+'''this definds a class that creates a button for the intro screen.'''
+
+class Button:
+    def __init__(self, text, x, y, width, height):
+        self.rect = pygame.Rect(x, y, width, height)
+        self.text = text
+        self.color = (0, 200, 0)
+        self.hover_color = (0, 255, 0)
+
+    def draw(self, screen, font):
+        mouse_pos = pygame.mouse.get_pos()
+
+        if self.rect.collidepoint(mouse_pos):
+            pygame.draw.rect(screen, self.hover_color, self.rect)
+        else:
+            pygame.draw.rect(screen, self.color, self.rect)
+
+        text_surf = font.render(self.text, True, (0, 0, 0))
+        text_rect = text_surf.get_rect(center=self.rect.center)
+        screen.blit(text_surf, text_rect)
+
+    def is_clicked(self, event):
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if self.rect.collidepoint(event.pos):
+                return True
+        return False
+
+"""this definds a function that creates the intro screen for the game."""
+
+def intro_screen():
+    intro_running = True
+
+    button = Button("PLAY", WIDTH//2 - 100, HEIGHT//2 - 50, 200, 100)
+
+    while intro_running:
+        screen.fill((30, 30, 30))
+
+        title_text = font.render("IMPOSSIBLE DASH", True, (255, 255, 255))
+        screen.blit(title_text, (WIDTH//2 - title_text.get_width()//2, 100))
+
+        button.draw(screen, font)
+
+        for event in pygame.event.get():
+
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    pygame.quit()
+                    sys.exit()
+
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+
+            if button.is_clicked(event):
+                intro_running = False  # exit intro
+
+        pygame.display.update()
+        clock.tick(60)
+
+
+
 """this definds a function that loads and saves your high score when you die or quit the game."""
 
 def load_high_scores():
@@ -50,10 +120,7 @@ def show_high_scores():
     for i, score in enumerate(high_scores, start= 1):
         print(f"{i}. {score}")
 
-# Screen
-WIDTH, HEIGHT = 800, 400
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Side Scroller")
+
 
 clock = pygame.time.Clock()
 font = pygame.font.SysFont(None, 36)
@@ -74,9 +141,9 @@ GRAVITY = 0.6
 
 """this difinds a class that will help us create levels."""
 class LevelItem:
-    def __init__(self, length = 1, speed = 1, obstacle = None, height_scale = 1):
-        self.length = length
-        self.speed = speed
+    def __init__(self, speed_scale = 1, width_scale = 1, obstacle = None, height_scale = 1):
+        self.width_scale = width_scale
+        self.speed_scale = speed_scale
         self.obstacle = obstacle
         self.height_scale = height_scale
 
@@ -126,9 +193,11 @@ class Player:
 
 # =====================
 class Obstacle:
-    def __init__(self, height_scale = 1):
+    def __init__(self, speed_scale = 1, width_scale = 1, height_scale = 1):
         self.type = "Platform"
-        self.width = 40
+        self.speed = 5
+        self.speed_scale = speed_scale
+        self.width = 40 * width_scale
         self.height = 40
         self.height_scale = height_scale
         self.image = pygame.transform.scale(pygame.image.load("assets/Object.png"), (self.width, self.height))
@@ -136,7 +205,7 @@ class Obstacle:
         self.x = WIDTH
         self.y = GROUND_Y - (self.height * self.height_scale)
 
-        self.speed = 5
+        self.speed = self.speed * speed_scale
 
     def reset(self):
         self.x = WIDTH
@@ -156,8 +225,8 @@ class Obstacle:
 """this definds an kill object which if the player tuches it the user will die."""
 
 class KillObject(Obstacle):
-    def __init__(self, height_scale = 1):
-        super().__init__()
+    def __init__(self, speed_scale = 1, width_scale = 1, height_scale = 1):
+        super().__init__(speed_scale, width_scale, height_scale)
 
         self.type = "KillObject"
 
@@ -168,12 +237,11 @@ class KillObject(Obstacle):
         )
 
        # Set size FIRST
-        self.width = 40
-        self.height = 30
+        self.width = 40 * width_scale
+        self.height = 30 * height_scale
 
         # FORCE correct ground alignment
         self.y = GROUND_Y - (self.height * self.height_scale) - 10
-
 
 
 
@@ -200,16 +268,24 @@ def is_landing_on_top(player, obstacle):
 HIGH_SCORE_FILE = "highscores.json"
 MAX_SCORES = 10
 
+
+""" this is the main game loop, it creates the player and the obstacles, it also checks for collisions and updates the score and death counter. """
+
 # =====================
 # Game Loop
 # =====================
 def main():
+    pygame.display.set_caption("Impossible_Dash")
+    
     player = Player()
     obstacles = []
 
     level = []
     level.append(LevelItem(1, 1, Obstacle, 1))
-    level.append(LevelItem(1, 1, Obstacle, 2))
+    level.append(LevelItem(1, 3, Obstacle, 2))
+    level.append(LevelItem(1, 1, Obstacle, 3))
+    level.append(LevelItem(1, 1, KillObject, 1))
+    level.append(LevelItem(1, 2, Obstacle, 2))
     level.append(LevelItem(1, 1, Obstacle, 1))
     level.append(LevelItem(1, 1, KillObject, 1))
     level.append(LevelItem(1, 1, Obstacle, 1))
@@ -219,6 +295,29 @@ def main():
     level.append(LevelItem(1, 1, KillObject, 1))
 
     high_scores = load_high_scores()
+
+    try:
+        pygame.mixer.music.load("assets/music.mp3")
+        pygame.mixer.music.set_volume(0.5)
+        pygame.mixer.music.play(-1)
+    except Exception as e:
+        print("Music error:", e)
+
+    try:
+        jump_sound = pygame.mixer.Sound("assets/music2.mp3")
+        jump_sound.set_volume(1.0)
+
+    except Exception as e:
+        print("Jump sound error:", e)
+        jump_sound = None
+
+    try: 
+        death_sound = pygame.mixer.Sound("assets/dying.mp3")
+        death_sound.set_volume(1.0)
+
+    except Exception as e:
+        print("Death sound error:", e)
+        death_sound = None
 
     spawn_timer = 0
     score = 0
@@ -243,8 +342,16 @@ def main():
                 sys.exit()
 
             if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    save_high_scores(high_scores)
+                    pygame.quit()
+                    sys.exit()
+
                 if event.key == pygame.K_SPACE:
-                    player.jump()
+                    if player.on_ground:
+                        player.jump()
+                        if not jump_sound.get_num_channels():
+                            jump_sound.play()
 
         # Spawn obstacles
         spawn_timer += 1
@@ -254,12 +361,15 @@ def main():
 # Reset level index if we reach the end of the level list
             if level_index == len(level):    
                 level_index = 0
-                current_timer -= 10  # Increase difficulty by reducing spawn time
-                if current_timer < 10:  # Prevent timer from going too low
-                    current_timer = 10
+                obstacle.speed_scale += 3
+                 
+               # current_timer -= 10  # Increase difficulty by reducing spawn time
+               # if current_timer < 10:  # Prevent timer from going too low
+               #     current_timer = 10
 
-            obstacle = level[level_index].obstacle(level[level_index].height_scale)  # Create obstacle based on current level item
+            obstacle = level[level_index].obstacle(level[level_index].speed_scale, level[level_index].width_scale, level[level_index].height_scale)  # Create obstacle based on current level item
             obstacle.reset()  # Reset obstacle position
+
             obstacles.append(obstacle)  # Spawn obstacle from lev
 
             level_index += 1
@@ -291,6 +401,9 @@ def main():
                 break
             else: 
                 if  (obstacle.type == "KillObject" or obstacle.type == "Platform") and player_rect.colliderect(obstacle.get_rect()):
+                    if death_sound and not death_sound.get_num_channels():
+                        death_sound.play()
+
                     deaths += 1
                     player = Player()
                     obstacles.clear()
@@ -326,6 +439,6 @@ def main():
 
         pygame.display.update()
 
-
 if __name__ == "__main__":
+    intro_screen()
     main()
