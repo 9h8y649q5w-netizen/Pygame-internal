@@ -13,7 +13,7 @@ third step is to add the scoring system and the death counter,'''
 
 
 
-
+from turtle import speed
 
 import pygame 
 import random
@@ -21,7 +21,6 @@ import sys
 import json
 import os 
 from pygame.locals import *
-from turtle import speed
 
 # Initialize Pygame
 pygame.init()
@@ -290,7 +289,7 @@ def main():
     level.append(LevelItem(1, 1, Obstacle, 1))
     level.append(LevelItem(1, 1, KillObject, 1))
     level.append(LevelItem(1, 1, Obstacle, 1))
-    level.append(LevelItem(1, 1, KillObject, 1))
+    level.append(LevelItem(1, 1, Obstacle, 1))
     level.append(LevelItem(1, 1, Obstacle, 1))
     level.append(LevelItem(1, 1, KillObject, 1))
     level.append(LevelItem(1, 1, Obstacle, 2))
@@ -327,9 +326,8 @@ def main():
     score = 0
     deaths = 0
     running = True
-    info_message = ""
 
-    current_timer = 40
+    current_timer = 90
 
     level_index = 0
 
@@ -351,16 +349,12 @@ def main():
                     save_high_scores(high_scores)
                     pygame.quit()
                     sys.exit()
-                elif event.key == pygame.K_SPACE:
+
+                if event.key == pygame.K_SPACE:
                     if player.on_ground:
                         player.jump()
                         if not jump_sound.get_num_channels():
                             jump_sound.play()
-                    info_message = ""
-                else:
-                    info_message = "Press SPACE to jump or ESC to quit."
-            elif event.type == pygame.MOUSEBUTTONDOWN:
-                info_message = "Press SPACE to jump or ESC to quit."
 
         # Spawn obstacles
         spawn_timer += 1
@@ -370,7 +364,7 @@ def main():
 # Reset level index if we reach the end of the level list
             if level_index == len(level):    
                 level_index = 0
-                obstacle.speed_scale += 555500
+                obstacle.speed_scale += 55550
                  
                # current_timer -= 10  # Increase difficulty by reducing spawn time
                # if current_timer < 10:  # Prevent timer from going too low
@@ -418,7 +412,7 @@ def main():
                     obstacles.clear()
 
                     level_index = 0
-                    current_timer = 40
+                    current_timer = 90
 
                     # Update high scores
                     high_scores = add_score(score)
@@ -441,13 +435,10 @@ def main():
         score_text = font.render(f"Score: {score}", True, BLACK)
         death_text = font.render(f"Deaths: {deaths}", True, BLACK)
         save_high_scores_text = font.render(f"High Score: {high_scores[0] if high_scores else 0}", True, BLACK)
-        info_text = font.render(info_message, True, BLACK) if info_message else None
 
         screen.blit(score_text, (10, 10))
         screen.blit(death_text, (10, 40))
         screen.blit(save_high_scores_text, (10, 70))
-        if info_text:
-            screen.blit(info_text, (10, 100))
 
         pygame.display.update()
 
