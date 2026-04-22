@@ -11,7 +11,15 @@ s
 
 first step is to create the gui,
 second step is to create the player and the obstacles,
-third step is to add the scoring system and the death counter,'''
+third step is to add the scoring system and the death counter,
+
+CHANGELOG:
+- 22/04/2026: Added "How to Play" button to main menu with instructions screen
+- 22/04/2026: Added "Leaderboard" button to main menu with high scores display
+- 23/04/2026: Added confirmation dialog for "Reset Scores" to prevent accidental resets
+- 23/04/2026: Removed "Reset Skins" button from settings screen
+- 23/04/2026: Repositioned confirmation buttons to avoid overlapping with warning text
+'''
 
 
 
@@ -80,8 +88,10 @@ def intro_screen():
     intro_running = True
     info_message = ""
 
-    play_button = Button("RUN", WIDTH//2 - 100, HEIGHT//2 - 50, 200, 100)
-    settings_button = Button("SETTINGS", WIDTH//2 - 100, HEIGHT//2 + 60, 200, 100)
+    play_button = Button("RUN", WIDTH//2 - 100, HEIGHT//2 - 120, 200, 60)
+    how_to_play_button = Button("HOW TO PLAY", WIDTH//2 - 100, HEIGHT//2 - 30, 200, 60)
+    leaderboard_button = Button("LEADERBOARD", WIDTH//2 - 100, HEIGHT//2 + 60, 200, 60)
+    settings_button = Button("SETTINGS", WIDTH//2 - 100, HEIGHT//2 + 150, 200, 60)
 
     while intro_running:
         screen.fill((30, 30, 30))
@@ -90,6 +100,8 @@ def intro_screen():
         screen.blit(title_text, (WIDTH//2 - title_text.get_width()//2, 100))
 
         play_button.draw(screen, font)
+        how_to_play_button.draw(screen, font)
+        leaderboard_button.draw(screen, font)
         settings_button.draw(screen, font)
 
         for event in pygame.event.get():
@@ -110,6 +122,14 @@ def intro_screen():
             if play_button.is_clicked(event):
                 intro_running = False
                 return "game"
+            
+            if how_to_play_button.is_clicked(event):
+                intro_running = False
+                return "how_to_play"
+            
+            if leaderboard_button.is_clicked(event):
+                intro_running = False
+                return "leaderboard"
             
             if settings_button.is_clicked(event):
                 intro_running = False
@@ -403,16 +423,109 @@ def is_landing_on_top(player, obstacle):
 
 
 
+def how_to_play_screen():
+    # How to Play screen with game instructions
+    # Added 22/04/2026 - Provides gameplay instructions to new players
+    running = True
+    back_button = Button("BACK", WIDTH//2 - 100, HEIGHT - 100, 200, 50)
+
+    while running:
+        screen.fill((30, 30, 30))
+
+        title_text = font.render("HOW TO PLAY", True, (255, 255, 255))
+        screen.blit(title_text, (WIDTH//2 - title_text.get_width()//2, 50))
+
+        instructions = [
+            "PRESS SPACE to jump",
+            "Jump over obstacles to survive",
+            "Land on top of platforms to stay alive",
+            "Red objects will kill you on contact",
+            "Try to get the highest score!",
+            "Press E to return to menu during gameplay"
+        ]
+
+        y_offset = 150
+        for instruction in instructions:
+            text = small_font.render(instruction, True, (255, 255, 255))
+            screen.blit(text, (WIDTH//2 - text.get_width()//2, y_offset))
+            y_offset += 60
+
+        back_button.draw(screen, font)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    return "menu"
+
+            if back_button.is_clicked(event):
+                running = False
+                return "menu"
+
+        pygame.display.update()
+        clock.tick(60)
+
+def leaderboard_screen():
+    # Leaderboard screen displaying top scores
+    # Added 22/04/2026 - Shows top 10 high scores for competitive gameplay
+    player_data = load_player_data()
+    running = True
+    back_button = Button("BACK", WIDTH//2 - 100, HEIGHT - 100, 200, 50)
+
+    while running:
+        screen.fill((30, 30, 30))
+
+        title_text = font.render("LEADERBOARD", True, (255, 255, 255))
+        screen.blit(title_text, (WIDTH//2 - title_text.get_width()//2, 50))
+
+        high_scores = player_data.get("high_scores", [])
+
+        if not high_scores:
+            no_scores_text = font.render("No scores yet. Start playing!", True, (255, 255, 255))
+            screen.blit(no_scores_text, (WIDTH//2 - no_scores_text.get_width()//2, HEIGHT//2))
+        else:
+            y_offset = 150
+            for rank, score in enumerate(high_scores, 1):
+                score_text = font.render(f"{rank}. {score}", True, (255, 255, 255))
+                screen.blit(score_text, (WIDTH//2 - score_text.get_width()//2, y_offset))
+                y_offset += 50
+
+        back_button.draw(screen, font)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    return "menu"
+
+            if back_button.is_clicked(event):
+                running = False
+                return "menu"
+
+        pygame.display.update()
+        clock.tick(60)
+
 def settings_screen():
     # Settings screen for game configuration
     # Allows toggling music, resetting scores/coins/skins
+    # Updated 23/04/2026: Added confirmation dialog for score reset, removed skins reset
     player_data = load_player_data()
     running = True
+    show_reset_confirmation = False
 
     back_button = Button("BACK", WIDTH//2 - 100, HEIGHT - 100, 200, 50)
     mute_button = Button("TOGGLE MUSIC", WIDTH//2 - 150, 200, 300, 50)
     reset_scores_button = Button("RESET SCORES", WIDTH//2 - 150, 280, 300, 50)
-    reset_skins_button = Button("RESET SKINS", WIDTH//2 - 150, 440, 300, 50)
+    
+    # Confirmation buttons
+    confirm_button = Button("YES, RESET", WIDTH//2 - 150, 400, 140, 50)
+    cancel_button = Button("CANCEL", WIDTH//2 + 10, 400, 140, 50)
 
     while running:
         screen.fill((30, 30, 30))
@@ -426,8 +539,34 @@ def settings_screen():
 
         mute_button.draw(screen, font)
         reset_scores_button.draw(screen, font)
-        reset_skins_button.draw(screen, font)
         back_button.draw(screen, font)
+
+        # Draw confirmation dialog if needed
+        # Added 23/04/2026: Prevents accidental score resets with confirmation dialog
+        if show_reset_confirmation:
+            # Semi-transparent overlay
+            overlay = pygame.Surface((WIDTH, HEIGHT))
+            overlay.set_alpha(128)
+            overlay.fill((0, 0, 0))
+            screen.blit(overlay, (0, 0))
+            
+            # Confirmation box
+            confirm_rect = pygame.Rect(WIDTH//2 - 200, HEIGHT//2 - 100, 400, 200)
+            pygame.draw.rect(screen, (50, 50, 50), confirm_rect)
+            pygame.draw.rect(screen, (255, 255, 255), confirm_rect, 3)
+            
+            # Confirmation text
+            confirm_title = font.render("CONFIRM RESET", True, (255, 255, 255))
+            screen.blit(confirm_title, (WIDTH//2 - confirm_title.get_width()//2, HEIGHT//2 - 70))
+            
+            confirm_text = small_font.render("This will delete ALL high scores!", True, (255, 255, 255))
+            screen.blit(confirm_text, (WIDTH//2 - confirm_text.get_width()//2, HEIGHT//2 - 40))
+            
+            confirm_text2 = small_font.render("This action cannot be undone.", True, (255, 255, 255))
+            screen.blit(confirm_text2, (WIDTH//2 - confirm_text2.get_width()//2, HEIGHT//2 - 20))
+            
+            confirm_button.draw(screen, font)
+            cancel_button.draw(screen, font)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -437,8 +576,11 @@ def settings_screen():
 
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    save_player_data(player_data)
-                    return "menu"
+                    if show_reset_confirmation:
+                        show_reset_confirmation = False
+                    else:
+                        save_player_data(player_data)
+                        return "menu"
 
             if back_button.is_clicked(event):
                 save_player_data(player_data)
@@ -448,12 +590,15 @@ def settings_screen():
             if mute_button.is_clicked(event):
                 player_data["music_muted"] = not player_data["music_muted"]
 
-            if reset_scores_button.is_clicked(event):
-                player_data["high_scores"] = []
+            if reset_scores_button.is_clicked(event) and not show_reset_confirmation:
+                show_reset_confirmation = True
 
-            if reset_skins_button.is_clicked(event):
-                player_data["skins"] = ["red"]
-                player_data["current_skin"] = "red"
+            if show_reset_confirmation:
+                if confirm_button.is_clicked(event):
+                    player_data["high_scores"] = []
+                    show_reset_confirmation = False
+                elif cancel_button.is_clicked(event):
+                    show_reset_confirmation = False
 
         pygame.display.update()
         clock.tick(60)
@@ -484,8 +629,6 @@ def main():
     level.append(LevelItem(1, 1, KillObject, 1))
     level.append(LevelItem(1, 1, Obstacle, 1))
     level.append(LevelItem(1, 1, KillObject, 1))
-    level.append(LevelItem(1, 1, Obstacle, 1))
-    level.append(LevelItem(1, 1, Obstacle, 2))
     level.append(LevelItem(1, 1, KillObject, 1))
 
     player_data = load_player_data()
@@ -657,12 +800,16 @@ def main():
 
 if __name__ == "__main__":
     try:
-        # Main game loop with menu, game, shop, and settings states
+        # Main game loop with menu, game, how_to_play, leaderboard, and settings states
         while True:
             if GAME_STATE == "menu":
                 GAME_STATE = intro_screen()
             elif GAME_STATE == "game":
                 GAME_STATE = main()
+            elif GAME_STATE == "how_to_play":
+                GAME_STATE = how_to_play_screen()
+            elif GAME_STATE == "leaderboard":
+                GAME_STATE = leaderboard_screen()
             elif GAME_STATE == "settings":
                 GAME_STATE = settings_screen()
     except Exception as e:
