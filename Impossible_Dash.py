@@ -7,14 +7,7 @@ About:
 Inspired by the game "Impossible Dash" by Nitrome and the rip of version of "Impossible Dash", "Geometry dash" by Robert Topala, 
 this is a remake of the game in Python using Pygame but it much more harder.
 
-Recent Updates (2026):
-- Added shop system with 8 colored skins (red, blue, green, yellow, purple, orange, pink, cyan)
-- Implemented settings screen with music toggle, score/coin/skin resets
-- Dynamic coin value system that increases based on collection milestones
-- Added sound effects for coin collection and spending
-- Music controls with mute functionality
-- Fallback system to backup version if main game crashes
-- Enhanced UI with coin value display and improved controls
+s
 
 first step is to create the gui,
 second step is to create the player and the obstacles,
@@ -37,36 +30,7 @@ pygame.init()
 pygame.mixer.init()
 import time
 
-last_frame_time = time.time()
-FREEZE_LIMIT = 3  # seconds before we consider it frozen
 
-"""this definds a function that will find out why the game is frozen and will stop the game if it is frozen."""
-
-def freeze_screen():
-    frozen = True
-    debug_font = pygame.font.SysFont(None, 32)
-
-    while frozen:
-        screen.fill((0, 0, 40))  # dark blue
-
-        title = font.render("GAME FROZEN", True, (255, 255, 0))
-        screen.blit(title, (WIDTH//2 - title.get_width()//2, 150))
-
-        msg = debug_font.render("Press ESC to quit", True, (255, 255, 255))
-        screen.blit(msg, (WIDTH//2 - msg.get_width()//2, 300))
-
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    pygame.quit()
-                    sys.exit()
-
-        pygame.display.update()
-        clock.tick(60)
 
 
 # Screen
@@ -114,9 +78,10 @@ class Button:
 
 def intro_screen():
     intro_running = True
+    info_message = ""
 
-    play_button = Button("PLAY", WIDTH//2 - 100, HEIGHT//2 - 50, 200, 100)
-    settings_button = Button("SETTINGS", WIDTH//2 - 100, HEIGHT//2 + 170, 200, 100)
+    play_button = Button("RUN", WIDTH//2 - 100, HEIGHT//2 - 50, 200, 100)
+    settings_button = Button("SETTINGS", WIDTH//2 - 100, HEIGHT//2 + 60, 200, 100)
 
     while intro_running:
         screen.fill((30, 30, 30))
@@ -160,7 +125,7 @@ def intro_screen():
 def load_player_data():
     """Load existing player data from file, or return defaults."""
     if not os.path.exists(HIGH_SCORE_FILE):
-        data = {"high_scores": [], "coins": 0, "skins": ["red"], "current_skin": "red", "music_muted": False}
+        data = {"high_scores": [], "music_muted": False}
         # Migrate old highscores.json
         old_file = "highscores.json"
         if os.path.exists(old_file):
@@ -174,12 +139,6 @@ def load_player_data():
         # Ensure all keys exist
         if "high_scores" not in data:
             data["high_scores"] = []
-        if "coins" not in data:
-            data["coins"] = 0
-        if "skins" not in data:
-            data["skins"] = ["red"]
-        if "current_skin" not in data:
-            data["current_skin"] = "red"
         if "music_muted" not in data:
             data["music_muted"] = False
         return data
@@ -199,10 +158,7 @@ def add_score(new_score, data):
     data["high_scores"] = high_scores
     return data
 
-def add_coins(amount, data):
-    """Add coins to player data."""
-    data["coins"] += amount
-    return data
+
 
 
 
@@ -304,16 +260,7 @@ SKIN_COLORS = {
     "turquoise": TURQUOISE
 }
 
-# Dynamic coin value system: coin value increases based on collection milestones
-# Increment intervals scale with total coins owned (100, 1000, 10000)
-def get_coin_increment(total_coins):
-    """Get the increment interval for coin value based on total coins."""
-    if total_coins < 1000:
-        return 100
-    elif total_coins < 10000:
-        return 1000
-    else:
-        return 10000
+
 # Ground
 GROUND_HEIGHT = 20
 GROUND_Y = HEIGHT - GROUND_HEIGHT
@@ -347,20 +294,9 @@ class Player:
         self.skin = skin
         self.base_image = pygame.transform.scale(pygame.image.load("assets/Character.png"), (self.width, self.height))
         self.image = self.base_image.copy()
-        self.apply_skin()  # Apply skin color tinting
         self.vel_y = 0
         self.on_ground = True
 
-    def apply_skin(self):
-        # Apply color tint to player sprite based on selected skin
-        self.image = self.base_image.copy()
-        if self.skin in SKIN_COLORS and SKIN_COLORS[self.skin]:
-            color = SKIN_COLORS[self.skin]
-            self.image.fill(color, special_flags=pygame.BLEND_MULT)
-
-    def set_skin(self, skin):
-        self.skin = skin
-        self.apply_skin()
 
     def jump(self):
         if self.on_ground:
@@ -443,21 +379,6 @@ class KillObject(Obstacle):
 
 """this definds a coin object which the player can collect for coins."""
 
-class Coin(Obstacle):
-    def __init__(self, speed_scale=1, width_scale=1, height_scale=1):
-        super().__init__(speed_scale, width_scale, height_scale)
-
-        self.type = "Coin"
-
-        self.image = pygame.transform.scale(
-            pygame.image.load("assets/pngtree-gold-dollar-coin-png-image_3975554.png"),
-            (self.width, self.height)
-        )
-
-        self.width = 30 * width_scale
-        self.height = 30 * height_scale
-        self.y = GROUND_Y - self.height - 50  # Float above ground
-
 
 
 """this definds a function to checks if the player is on top of the object and if it isn't it will kill the user. """
@@ -491,7 +412,6 @@ def settings_screen():
     back_button = Button("BACK", WIDTH//2 - 100, HEIGHT - 100, 200, 50)
     mute_button = Button("TOGGLE MUSIC", WIDTH//2 - 150, 200, 300, 50)
     reset_scores_button = Button("RESET SCORES", WIDTH//2 - 150, 280, 300, 50)
-    reset_coins_button = Button("RESET COINS", WIDTH//2 - 150, 360, 300, 50)
     reset_skins_button = Button("RESET SKINS", WIDTH//2 - 150, 440, 300, 50)
 
     while running:
@@ -506,7 +426,6 @@ def settings_screen():
 
         mute_button.draw(screen, font)
         reset_scores_button.draw(screen, font)
-        reset_coins_button.draw(screen, font)
         reset_skins_button.draw(screen, font)
         back_button.draw(screen, font)
 
@@ -532,9 +451,6 @@ def settings_screen():
             if reset_scores_button.is_clicked(event):
                 player_data["high_scores"] = []
 
-            if reset_coins_button.is_clicked(event):
-                player_data["coins"] = 0
-
             if reset_skins_button.is_clicked(event):
                 player_data["skins"] = ["red"]
                 player_data["current_skin"] = "red"
@@ -551,17 +467,14 @@ def main():
 
     level = []
     level.append(LevelItem(1, 1, Obstacle, 1))
-    level.append(LevelItem(1, 1, Coin, 1))
     level.append(LevelItem(1, 3, Obstacle, 2))
     level.append(LevelItem(1, 1, Obstacle, 3))
     level.append(LevelItem(1, 1, KillObject, 1))
-    level.append(LevelItem(1, 1, Coin, 2))
     level.append(LevelItem(1, 2, Obstacle, 2))
     level.append(LevelItem(1, 1, Obstacle, 1))
     level.append(LevelItem(1, 1, KillObject, 1))
     level.append(LevelItem(1, 1, Obstacle, 1))
     level.append(LevelItem(1, 1, KillObject, 1))
-    level.append(LevelItem(1, 1, Coin, 1))
     level.append(LevelItem(1, 1, Obstacle, 1))
     level.append(LevelItem(1, 1, KillObject, 1))
     level.append(LevelItem(1, 1, Obstacle, 2))
@@ -581,7 +494,7 @@ def main():
     try:
         pygame.mixer.music.load("assets/music.mp3")
         pygame.mixer.music.set_volume(0.5)
-        pygame.mixer.music.stop()  # Ensure stopped before playing
+        pygame.mixer.music.fadeout(1000)  # Ensure stopped before playing
         pygame.mixer.music.play(-1)
         if player_data["music_muted"]:
             pygame.mixer.music.set_volume(0)
@@ -604,20 +517,11 @@ def main():
         print("Death sound error:", e)
         death_sound = None
 
-    try:
-        coin_collect_sound = pygame.mixer.Sound("assets/chieuk-coin-257878.mp3")
-        coin_collect_sound.set_volume(1.0)
-
-    except Exception as e:
-        print("Coin collect sound error:", e)
-        coin_collect_sound = None
+    
 
     spawn_timer = 0
     score = 0
     deaths = 0
-    coins_collected = 0
-    coin_value = 1  # Dynamic coin value, increases with collection milestones
-    last_increment_coins = 0  # Tracks last milestone for value increases
     running = True
     info_message = ""
 
@@ -630,12 +534,14 @@ def main():
         clock.tick(60)
         screen.fill(WHITE)
 
+        # Increment score each frame
+        score += 1
+
         # Events
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 # Save data
                 player_data["high_scores"] = high_scores
-                player_data["coins"] += coins_collected
                 save_player_data(player_data)
                 pygame.quit()
                 sys.exit()
@@ -643,15 +549,13 @@ def main():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     player_data["high_scores"] = high_scores
-                    player_data["coins"] += coins_collected
                     save_player_data(player_data)
                     pygame.quit()
                     sys.exit()
                 elif event.key == pygame.K_e:
                     player_data["high_scores"] = high_scores
-                    player_data["coins"] += coins_collected
                     save_player_data(player_data)
-                    pygame.mixer.music.stop()
+                    pygame.mixer.music.fadeout(1000)
                     return "menu"
                 elif event.key == pygame.K_SPACE:
                     if player.on_ground:
@@ -701,22 +605,6 @@ def main():
         player_rect = player.get_rect()
         for obstacle in obstacles:
 
-            if obstacle.type == "Coin" and player_rect.colliderect(obstacle.get_rect()):
-                coins_collected += coin_value  # Add coins based on current value multiplier
-                if coin_collect_sound and not coin_collect_sound.get_num_channels():
-                    coin_collect_sound.play()
-                # Dynamic coin value system: increase value at collection milestones
-                total_coins = player_data["coins"] + coins_collected
-                increment = get_coin_increment(total_coins)
-                if coins_collected >= last_increment_coins + increment:
-                    coin_value += 1
-                    last_increment_coins += increment
-                obstacles.remove(obstacle)
-                continue
-
-            # Update score
-            score += 1
-
             if is_landing_on_top(player, obstacle) and obstacle.type == "Platform":
                 # Snap player to top of obstacle
                 player.y = obstacle.y - player.height
@@ -756,15 +644,11 @@ def main():
         # UI text
         score_text = font.render(f"Score: {score}", True, BLACK)
         death_text = font.render(f"Deaths: {deaths}", True, BLACK)
-        coins_text = font.render(f"Coins: {player_data['coins'] + coins_collected}", True, BLACK)
-        coin_value_text = font.render(f"Coin Value: {coin_value}", True, BLACK)
         save_high_scores_text = font.render(f"High Score: {high_scores[0] if high_scores else 0}", True, BLACK)
         info_text = font.render(info_message, True, BLACK) if info_message else None
 
         screen.blit(score_text, (10, 10))
         screen.blit(death_text, (10, 40))
-        screen.blit(coins_text, (10, 70))
-        screen.blit(coin_value_text, (10, 100))
         screen.blit(save_high_scores_text, (10, 130))
         if info_text:
             screen.blit(info_text, (10, 160))
@@ -779,8 +663,6 @@ if __name__ == "__main__":
                 GAME_STATE = intro_screen()
             elif GAME_STATE == "game":
                 GAME_STATE = main()
-            elif GAME_STATE == "shop":
-                GAME_STATE = shop_screen()
             elif GAME_STATE == "settings":
                 GAME_STATE = settings_screen()
     except Exception as e:
