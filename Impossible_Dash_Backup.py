@@ -4,8 +4,7 @@ Author: Oliver Lloyd
 
 About:
 
-Inspired by the game "Impossible Dash" by Nitrome and the rip of version of "Impossible Dash", "Geometry dash" by Robert Topala, 
-this is a remake of the game in Python using Pygame but it much more harder.
+This is the back up version of Impossible Dash. 
 
 first step is to create the gui,
 second step is to create the player and the obstacles,
