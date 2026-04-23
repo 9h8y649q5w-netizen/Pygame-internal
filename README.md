@@ -1,0 +1,1 @@
+# For it to work you need to press play (▶️) and it will show you the menu and on the menu it will show you play, settings, leaderboard, how to play, and quit. To play press play. To find out how to play click how to play. to see your past high scores, press leaderboard. To turn of or on the music or reset your score, click on settings. to quit, press quit. 

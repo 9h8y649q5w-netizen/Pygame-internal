@@ -19,6 +19,10 @@ CHANGELOG:
 - 23/04/2026: Added confirmation dialog for "Reset Scores" to prevent accidental resets
 - 23/04/2026: Removed "Reset Skins" button from settings screen
 - 23/04/2026: Repositioned confirmation buttons to avoid overlapping with warning text
+- 24/04/2026: Changed main menu button text from "RUN" to "PLAY"
+- 24/04/2026: Added "QUIT" button to main menu below settings button
+- 24/04/2026: Updated "How to Play" instructions to say "Blue objects will kill you" instead of "Red objects"
+- 24/04/2026: Fixed initial obstacle spacing by adjusting spawn timer from 20 to 40 frames
 '''
 
 
@@ -88,10 +92,11 @@ def intro_screen():
     intro_running = True
     info_message = ""
 
-    play_button = Button("RUN", WIDTH//2 - 100, HEIGHT//2 - 120, 200, 60)
+    play_button = Button("PLAY", WIDTH//2 - 100, HEIGHT//2 - 120, 200, 60)
     how_to_play_button = Button("HOW TO PLAY", WIDTH//2 - 100, HEIGHT//2 - 30, 200, 60)
     leaderboard_button = Button("LEADERBOARD", WIDTH//2 - 100, HEIGHT//2 + 60, 200, 60)
     settings_button = Button("SETTINGS", WIDTH//2 - 100, HEIGHT//2 + 150, 200, 60)
+    quit_button = Button("QUIT", WIDTH//2 - 100, HEIGHT//2 + 240, 200, 60)
 
     while intro_running:
         screen.fill((30, 30, 30))
@@ -103,6 +108,7 @@ def intro_screen():
         how_to_play_button.draw(screen, font)
         leaderboard_button.draw(screen, font)
         settings_button.draw(screen, font)
+        quit_button.draw(screen, font)
 
         for event in pygame.event.get():
 
@@ -134,6 +140,12 @@ def intro_screen():
             if settings_button.is_clicked(event):
                 intro_running = False
                 return "settings"
+            
+            if quit_button.is_clicked(event):
+                player_data = load_player_data()
+                save_player_data(player_data)
+                pygame.quit()
+                sys.exit()
 
         pygame.display.update()
         clock.tick(60)
@@ -439,7 +451,7 @@ def how_to_play_screen():
             "PRESS SPACE to jump",
             "Jump over obstacles to survive",
             "Land on top of platforms to stay alive",
-            "Red objects will kill you on contact",
+            "Blue objects will kill you on contact",
             "Try to get the highest score!",
             "Press E to return to menu during gameplay"
         ]
@@ -668,7 +680,7 @@ def main():
     running = True
     info_message = ""
 
-    current_timer = 40
+    current_timer = 30
 
     level_index = 0
 
