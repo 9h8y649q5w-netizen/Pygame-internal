@@ -1,20 +1,21 @@
 {
   "high_scores": [
+    2050,
+    2050,
+    2050,
+    1816,
+    1777,
     1763,
-    1011,
-    875,
-    780,
-    556,
-    553,
-    515,
-    452,
-    431,
-    406
+    1756,
+    1691,
+    1656,
+    1585
   ],
   "coins": 120,
   "skins": [
     "default"
   ],
   "current_skin": "default",
-  "music_muted": false
+  "music_muted": false,
+  "background": "default"
 }

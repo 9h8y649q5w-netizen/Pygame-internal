@@ -4,7 +4,7 @@ Author: Oliver Lloyd
 
 About:
 
-Inspired by the game "Impossible Dash" by Nitrome and the rip of version of "Impossible Dash", "Geometry dash" by Robert Topala, 
+Inspired by the game "Impossible" by Nitrome and the rip of version of "Impossible", "Geometry dash" by Robert Topala, 
 this is a remake of the game in Python using Pygame but it much more harder.
 
 s
@@ -24,10 +24,6 @@ CHANGELOG:
 - 24/04/2026: Updated "How to Play" instructions to say "Blue objects will kill you" instead of "Red objects"
 - 24/04/2026: Fixed initial obstacle spacing by adjusting spawn timer from 20 to 40 frames
 '''
-
-
-
-
 
 import pygame 
 import random
@@ -126,8 +122,8 @@ def intro_screen():
                 sys.exit()
 
             if play_button.is_clicked(event):
-                intro_running = False
                 return "game"
+
             
             if how_to_play_button.is_clicked(event):
                 intro_running = False
@@ -157,14 +153,14 @@ def intro_screen():
 def load_player_data():
     """Load existing player data from file, or return defaults."""
     if not os.path.exists(HIGH_SCORE_FILE):
-        data = {"high_scores": [], "music_muted": False}
+        data = {"high_scores": [], "music_muted": False, "background": "default", "current_skin": "default"}
         # Migrate old highscores.json
         old_file = "highscores.json"
         if os.path.exists(old_file):
             with open(old_file, "r") as f:
                 old_scores = json.load(f)
                 data["high_scores"] = old_scores
-            os.rename(old_file, old_file + ".backup")  # Backup old file
+ #           os.rename(old_file, old_file + ".backup")  # Backup old file
         return data
     with open(HIGH_SCORE_FILE, "r") as file:
         data = json.load(file)
@@ -173,6 +169,10 @@ def load_player_data():
             data["high_scores"] = []
         if "music_muted" not in data:
             data["music_muted"] = False
+        if "background" not in data:
+            data["background"] = "default"
+        if "current_skin" not in data:
+            data["current_skin"] = "default"
         return data
 
 def save_player_data(data):
@@ -358,31 +358,39 @@ class Player:
 
 # =====================
 class Obstacle:
-    def __init__(self, speed_scale = 1, width_scale = 1, height_scale = 1):
+    def __init__(self, speed_scale = 1, width_scale = 1, y = 40):
         self.type = "Platform"
         self.speed = 5
         self.speed_scale = speed_scale
         self.width = 40 * width_scale
-        self.height = 40
-        self.height_scale = height_scale
-        self.image = pygame.transform.scale(pygame.image.load("assets/Object.png"), (self.width, self.height))
+        self.height = 40  
+        self.y = y 
+
+     #   self.height_scale = height_scale
+        self.original_image = pygame.transform.scale(pygame.image.load("assets/Object.png"), (self.width, self.height))
+
+        self.image = self.original_image
 
         self.x = WIDTH
-        self.y = GROUND_Y - (self.height * self.height_scale)
+        self.y = GROUND_Y - (self.y)
+        self.y_original = self.y
 
         self.speed = self.speed * speed_scale
 
     def reset(self):
+        self.y = self.y_original
         self.x = WIDTH
 
     def update(self):
         self.x -= self.speed
+
 
     def draw(self, screen):
         screen.blit(self.image, (self.x, self.y))  
 
     def off_screen(self):
         return self.x < -self.width
+        
 
     def get_rect(self):
         return pygame.Rect(self.x, self.y, self.width, self.height)
@@ -390,26 +398,76 @@ class Obstacle:
 """this definds an kill object which if the player tuches it the user will die."""
 
 class KillObject(Obstacle):
-    def __init__(self, speed_scale = 1, width_scale = 1, height_scale = 1):
-        super().__init__(speed_scale, width_scale, height_scale)
+    def __init__(self, speed_scale = 1, width_scale = 1, y = 40):
+        super().__init__(speed_scale, width_scale, y)
 
         self.type = "KillObject"
 
          # Load image with correct size
-        self.image = pygame.transform.scale(
+        self.original_image = pygame.transform.scale(
             pygame.image.load("assets/KillObject.png"),
             (self.width, self.height)
         )
 
+        self.image = self.original_image
+        
        # Set size FIRST
         self.width = 40 * width_scale
-        self.height = 30 * height_scale
-
+        self.height = 30  
         # FORCE correct ground alignment
-        self.y = GROUND_Y - (self.height * self.height_scale) - 10
+        self.y = GROUND_Y - (y + 10) # Adjusted for better alignment
+        self.y_original = self.y
 
+"""this creates an object with a kill object underneath it, if the player lands on top of it they will not die, 
+but if the jump below it and tuches the kill object they will die"""
 
-"""this definds a coin object which the player can collect for coins."""
+class KillObjectSimple:
+    def __init__(self, speed_scale = 1, width_scale = 1, y = 40):
+        self.speed = 5
+        self.speed_scale = speed_scale
+        self.width = 40 * width_scale
+
+        self.y = y
+
+        self.kIllObject = KillObject(speed_scale, width_scale, y - 40) 
+        self.kIllObject.image = pygame.transform.rotate(self.kIllObject.original_image, 180)
+
+        self.obstacle = Obstacle(speed_scale, width_scale, y)
+
+        self.type = "KillObjectSimple"
+
+    def reset(self):
+        self.obstacle.reset()
+        self.kIllObject.reset() 
+
+    def update(self):
+        self.kIllObject.update()    
+        self.obstacle.update()
+        self.y = self.obstacle.y 
+
+    def draw(self, screen):
+        self.kIllObject.draw(screen)
+        self.obstacle.draw(screen)
+
+    def off_screen(self):
+        return self.obstacle.off_screen() and self.kIllObject.off_screen()
+    
+    def get_rect(self):
+        # Return a combined rect that encompasses both the obstacle and the kill object
+        obstacle_rect = self.obstacle.get_rect()
+        kill_rect = self.kIllObject.get_rect()
+        combined_rect = obstacle_rect.union(kill_rect)
+        return combined_rect    
+        
+
+class KillObjectSimple1(KillObjectSimple):
+    def __init__(self, speed_scale = 1, width_scale = 1, y = 30):
+        super().__init__(speed_scale, width_scale, y)
+ 
+        self.kIllObject = KillObject(speed_scale, width_scale, y + 30) 
+        self.obstacle = Obstacle(speed_scale, width_scale, y)
+
+        self.type = "KillObjectSimple"
 
 
 
@@ -525,8 +583,9 @@ def leaderboard_screen():
 
 def settings_screen():
     # Settings screen for game configuration
-    # Allows toggling music, resetting scores/coins/skins
+    # Allows toggling music, resetting scores/coins/skins, and selecting background
     # Updated 23/04/2026: Added confirmation dialog for score reset, removed skins reset
+    # Updated 24/04/2026: Added background selection with 4 options
     player_data = load_player_data()
     running = True
     show_reset_confirmation = False
@@ -534,6 +593,12 @@ def settings_screen():
     back_button = Button("BACK", WIDTH//2 - 100, HEIGHT - 100, 200, 50)
     mute_button = Button("TOGGLE MUSIC", WIDTH//2 - 150, 200, 300, 50)
     reset_scores_button = Button("RESET SCORES", WIDTH//2 - 150, 280, 300, 50)
+    
+    # Background buttons
+    bg_default_button = Button("DEFAULT", WIDTH//2 - 370, 360, 120, 40)
+    bg_1781_button = Button("1781", WIDTH//2 - 180, 360, 120, 40)
+    bg_2307_button = Button("2307", WIDTH//2 + 10, 360, 120, 40)
+    bg_41500_button = Button("41500", WIDTH//2 + 200, 360, 120, 40)
     
     # Confirmation buttons
     confirm_button = Button("YES, RESET", WIDTH//2 - 150, 400, 140, 50)
@@ -551,6 +616,15 @@ def settings_screen():
 
         mute_button.draw(screen, font)
         reset_scores_button.draw(screen, font)
+        
+        # Draw background selection
+        bg_label = font.render("Background:", True, (255, 255, 255))
+        screen.blit(bg_label, (WIDTH//2 - 370, 320))
+        bg_default_button.draw(screen, small_font)
+        bg_1781_button.draw(screen, small_font)
+        bg_2307_button.draw(screen, small_font)
+        bg_41500_button.draw(screen, small_font)
+        
         back_button.draw(screen, font)
 
         # Draw confirmation dialog if needed
@@ -604,6 +678,16 @@ def settings_screen():
 
             if reset_scores_button.is_clicked(event) and not show_reset_confirmation:
                 show_reset_confirmation = True
+            
+            # Background selection
+            if bg_default_button.is_clicked(event):
+                player_data["background"] = "default"
+            elif bg_1781_button.is_clicked(event):
+                player_data["background"] = "1781.jpg"
+            elif bg_2307_button.is_clicked(event):
+                player_data["background"] = "2307.w026.n002.3609.B.p1.3609.jpg"
+            elif bg_41500_button.is_clicked(event):
+                player_data["background"] = "41500.jpg"
 
             if show_reset_confirmation:
                 if confirm_button.is_clicked(event):
@@ -618,30 +702,77 @@ def settings_screen():
 def main():
     pygame.display.set_caption("Impossible_Dash")
     
+    # 🔥 ADD THIS LINE RIGHT HERE
+    screen.fill((0, 0, 0))
+    pygame.display.update()
+
     player_data = load_player_data()
     player = Player(player_data["current_skin"])
     obstacles = []
 
     level = []
-    level.append(LevelItem(1, 1, Obstacle, 1))
-    level.append(LevelItem(1, 3, Obstacle, 2))
-    level.append(LevelItem(1, 1, Obstacle, 3))
-    level.append(LevelItem(1, 1, KillObject, 1))
-    level.append(LevelItem(1, 2, Obstacle, 2))
-    level.append(LevelItem(1, 1, Obstacle, 1))
-    level.append(LevelItem(1, 1, KillObject, 1))
-    level.append(LevelItem(1, 1, Obstacle, 1))
-    level.append(LevelItem(1, 1, KillObject, 1))
-    level.append(LevelItem(1, 1, Obstacle, 1))
-    level.append(LevelItem(1, 1, KillObject, 1))
-    level.append(LevelItem(1, 1, Obstacle, 2))
-    level.append(LevelItem(1, 1, Obstacle, 2))
-    level.append(LevelItem(1, 1, KillObject, 1))
-    level.append(LevelItem(1, 1, Obstacle, 3))
-    level.append(LevelItem(1, 1, KillObject, 1))
-    level.append(LevelItem(1, 1, Obstacle, 1))
-    level.append(LevelItem(1, 1, KillObject, 1))
-    level.append(LevelItem(1, 1, KillObject, 1))
+
+    level.append(LevelItem(1, 1, Obstacle, 40))
+    level.append(LevelItem(1, 1, Obstacle, 40))
+    level.append(LevelItem(1, 1, Obstacle, 40))
+    level.append(LevelItem(1, 2, Obstacle, 80))
+    level.append(LevelItem(1, 1, Obstacle, 40))
+    level.append(LevelItem(1, 1, Obstacle, 40))
+    level.append(LevelItem(1, 1, Obstacle, 40))
+    level.append(LevelItem(1, 3, Obstacle, 80))
+    level.append(LevelItem(1, 1, Obstacle, 120))
+    level.append(LevelItem(1, 3, Obstacle, 80))
+    level.append(LevelItem(1, 1, Obstacle, 40))
+    
+    level.append(LevelItem(1, 1, Obstacle, 40))
+    level.append(LevelItem(1, 3, Obstacle, 80))
+    level.append(LevelItem(1, 1, Obstacle, 120))
+    level.append(LevelItem(1, 3, Obstacle, 80))
+    level.append(LevelItem(1, 1, Obstacle, 40))
+    level.append(LevelItem(1, 1, KillObjectSimple, 120))
+    level.append(LevelItem(1, 2, Obstacle, 80))
+    level.append(LevelItem(1, 1, Obstacle, 40))
+    level.append(LevelItem(1, 1, KillObject, 30))
+    level.append(LevelItem(1, 1, Obstacle, 40))
+    level.append(LevelItem(1, 1, KillObject, 30))
+    level.append(LevelItem(1, 1, KillObject, 30))
+    level.append(LevelItem(1, 1, KillObject, 30))
+    level.append(LevelItem(1, 1, KillObjectSimple, 120))
+
+    level.append(LevelItem(1, 1, KillObjectSimple1, 160))
+    level.append(LevelItem(1, 1, KillObjectSimple, 80))
+    level.append(LevelItem(1, 1, KillObjectSimple, 80))
+    level.append(LevelItem(1, 1, KillObjectSimple1, 160))
+
+    level.append(LevelItem(1, 1, Obstacle, 40))
+    level.append(LevelItem(1, 3, Obstacle, 80))
+    level.append(LevelItem(1, 1, Obstacle, 120))
+    level.append(LevelItem(1, 1, KillObject, 60))
+    level.append(LevelItem(1, 1, KillObject, 30))
+    level.append(LevelItem(1, 3, Obstacle, 80))
+    level.append(LevelItem(1, 1, Obstacle, 40))
+    level.append(LevelItem(1, 1, KillObjectSimple, 120))
+    level.append(LevelItem(1, 1, Obstacle, 40))
+    level.append(LevelItem(1, 1, KillObject, 30))
+
+    level.append(LevelItem(1, 1, KillObjectSimple, 120))
+    level.append(LevelItem(1, 1, KillObjectSimple1, 40))
+    level.append(LevelItem(1, 1, KillObjectSimple1, 40))
+    level.append(LevelItem(1, 1, KillObjectSimple, 120))
+
+    level.append(LevelItem(1, 1, Obstacle, 80))
+    level.append(LevelItem(1, 1, Obstacle, 80))
+    level.append(LevelItem(1, 1, KillObject, 30))
+    level.append(LevelItem(1, 1, KillObjectSimple, 120))
+    level.append(LevelItem(1, 1, Obstacle, 120))
+    level.append(LevelItem(1, 1, KillObject, 30))
+    level.append(LevelItem(1, 1, Obstacle, 40))
+    level.append(LevelItem(1, 1, KillObject, 30))
+    level.append(LevelItem(1, 1, KillObject, 30))
+    level.append(LevelItem(1, 1, KillObjectSimple, 80))
+    level.append(LevelItem(1, 1, KillObjectSimple, 120))
+    level.append(LevelItem(1, 1, KillObjectSimple, 160))
+
 
     player_data = load_player_data()
     high_scores = player_data["high_scores"]
@@ -671,6 +802,18 @@ def main():
     except Exception as e:
         print("Death sound error:", e)
         death_sound = None
+    
+    # Load background
+    background = None   # ✅ PUT IT RIGHT HERE
+    background_color = (255, 255, 255)  # Default white background
+
+    if player_data["background"] != "default":
+        try:
+            background = pygame.image.load(f"assets/{player_data['background']}")
+            background = pygame.transform.scale(background, (WIDTH, HEIGHT))
+        except Exception as e:
+            print(f"Background loading error: {e}")
+            background = None
 
     
 
@@ -680,14 +823,18 @@ def main():
     running = True
     info_message = ""
 
-    current_timer = 30
+    current_timer = 40
 
     level_index = 0
 
     while running:
 
         clock.tick(60)
-        screen.fill(WHITE)
+        # Draw background
+        if background is not None:
+            screen.blit(background, (0, 0))
+        else:
+            screen.fill(background_color)
 
         # Increment score each frame
         score += 1
@@ -731,7 +878,7 @@ def main():
 # Reset level index if we reach the end of the level list
             if level_index == len(level):    
                 level_index = 0
-                obstacle.speed_scale += 555500
+                obstacle.speed_scale += 5
                  
                # current_timer -= 10  # Increase difficulty by reducing spawn time
                # if current_timer < 10:  # Prevent timer from going too low
@@ -760,14 +907,17 @@ def main():
         player_rect = player.get_rect()
         for obstacle in obstacles:
 
-            if is_landing_on_top(player, obstacle) and obstacle.type == "Platform":
+            if is_landing_on_top(player, obstacle) and (obstacle.type == "Platform" or obstacle.type == "KillObjectSimple"):
                 # Snap player to top of obstacle
                 player.y = obstacle.y - player.height
                 player.vel_y = 0
                 player.on_ground = True
                 break
             else: 
-                if  (obstacle.type == "KillObject" or obstacle.type == "Platform") and player_rect.colliderect(obstacle.get_rect()):
+                if  ((obstacle.type == "KillObject" or 
+                     obstacle.type == "KillObjectSimple") or 
+                     obstacle.type == "Platform") and player_rect.colliderect(obstacle.get_rect()):
+
                     if death_sound and not death_sound.get_num_channels():
                         death_sound.play()
 
@@ -811,25 +961,19 @@ def main():
         pygame.display.update()
 
 if __name__ == "__main__":
-    try:
+#    try:
         # Main game loop with menu, game, how_to_play, leaderboard, and settings states
-        while True:
-            if GAME_STATE == "menu":
-                GAME_STATE = intro_screen()
-            elif GAME_STATE == "game":
-                GAME_STATE = main()
-            elif GAME_STATE == "how_to_play":
-                GAME_STATE = how_to_play_screen()
-            elif GAME_STATE == "leaderboard":
-                GAME_STATE = leaderboard_screen()
-            elif GAME_STATE == "settings":
-                GAME_STATE = settings_screen()
-    except Exception as e:
+    while True:
+        if GAME_STATE == "menu":
+            GAME_STATE = intro_screen()
+        elif GAME_STATE == "game":
+            GAME_STATE = main()
+        elif GAME_STATE == "how_to_play":
+            GAME_STATE = how_to_play_screen()
+        elif GAME_STATE == "leaderboard":
+            GAME_STATE = leaderboard_screen()
+        elif GAME_STATE == "settings":
+            GAME_STATE = settings_screen()
+#    except Exception as e:
         # Fallback system: if main game crashes, attempt to run backup version
-        print(f"Main game crashed with error: {e}")
-        print("Attempting to run backup version...")
-        try:
-            exec(open("Impossible_Dash_Backup.py").read())
-        except Exception as e2:
-            print(f"Backup also failed: {e2}")
-            print("Unable to run the game. Please check the code.")
+#        print(f"Main game crashed with error: {e}")
